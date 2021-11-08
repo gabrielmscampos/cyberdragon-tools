@@ -36,8 +36,19 @@ bot.onText(/\/t (.+)/, async (msg, match) => {
   const chatId = msg.chat.id;
   const tokenName = match[1];
 
+  if (tokenName === null || tokenName === undefined) {
+    bot.sendMessage(chatId, 'Token ' + tokenName + ' not available!');
+    return;
+  }
+
   // Translate to token collection and get current timestamp
   const tokenSymbol = Symbols[tokenName.toUpperCase()];
+
+  if (tokenSymbol === undefined) {
+    bot.sendMessage(chatId, 'Token ' + tokenSymbol + ' not available!');
+    return;
+  }
+
   const tokenCollection = USDCollections[tokenSymbol.toUpperCase()];
   const currentTimestamp = new Date();
   currentTimestamp.setUTCHours(0,0,0,0);
@@ -103,6 +114,21 @@ bot.onText(/\/c (.+) (.+) (.+)/, async (msg, match) => {
   const secondaryStat = match[2];
   const level = match[3];
 
+  if (primaryStat === null || primaryStat === undefined) {
+    bot.sendMessage(chatId, 'Primary stat not defined!');
+    return;
+  }
+
+  if (secondaryStat === null || secondaryStat === undefined) {
+    bot.sendMessage(chatId, 'Secondary stat not defined!');
+    return;
+  }
+
+  if (level === null || level === undefined) {
+    bot.sendMessage(chatId, 'Level stat not defined!');
+    return;
+  }
+
   // Translate to token collection and get current timestamp
   const nBlocksPerDay = 432000/15;
   const tokenSymbol = Symbols['GOLD'];
@@ -152,6 +178,21 @@ bot.onText(/\/cl (.+) (.+) (.+)/, async (msg, match) => {
   const primaryStat = match[1].split(',');
   const secondaryStat = match[2].split(',');
   const level = match[3].split(',');
+
+  if (primaryStat === null || primaryStat === undefined) {
+    bot.sendMessage(chatId, 'Primary stat not defined!');
+    return;
+  }
+
+  if (secondaryStat === null || secondaryStat === undefined) {
+    bot.sendMessage(chatId, 'Secondary stat not defined!');
+    return;
+  }
+
+  if (level === null || level === undefined) {
+    bot.sendMessage(chatId, 'Level stat not defined!');
+    return;
+  }
 
   // Translate to token collection and get current timestamp
   const nBlocksPerDay = 432000/15;
@@ -246,6 +287,16 @@ bot.onText(/\/newAccount (.+) (.+)/, async (msg, match) => {
   const address = match[2];
   const collectionName = 'bnx-accounts';
 
+  if (username === null || username === undefined) {
+    bot.sendMessage(chatId, 'Username not defined!');
+    return;
+  }
+
+  if (address === null || address === undefined) {
+    bot.sendMessage(chatId, 'Address not defined!');
+    return;
+  }
+
   try {
     let responseMsg = '';
     let res = await checkAccount(collectionName, username);
@@ -284,6 +335,11 @@ bot.onText(/\/addToken (.+)/, async (msg, match) => {
   const tokenID = match[1];
   const collectionName = 'bnx-accounts';
 
+  if (tokenID === null || tokenID === undefined) {
+    bot.sendMessage(chatId, 'Token ID not defined!');
+    return;
+  }
+
   try {
     const res = await checkAccountWithChatID(collectionName, userChatId);
 
@@ -314,6 +370,11 @@ bot.onText(/\/rmToken (.+)/, async (msg, match) => {
 
   const tokenID = match[1];
   const collectionName = 'bnx-accounts';
+
+  if (tokenID === null || tokenID === undefined) {
+    bot.sendMessage(chatId, 'Token ID not defined!');
+    return;
+  }
 
   try {
     const res = await checkAccountWithChatID(collectionName, userChatId);

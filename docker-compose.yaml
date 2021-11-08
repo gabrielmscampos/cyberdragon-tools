@@ -7,7 +7,7 @@ services:
     container_name: binaryxtools-telegrambot
     restart: always
     environment:
-      - MONGO_URL=mongodb://lynxrufus:atmylynxrufusserver@127.0.0.1:27017/
+      - MONGO_URL=mongodb://lynxrufus:atmylynxrufusserver@mongo:27017/
       - MONGO_DB_NAME=cryptoWarehouse
       - STAGE=PROD
       - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}

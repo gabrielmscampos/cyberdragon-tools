@@ -374,23 +374,37 @@ bot.onText(/\/w/, async (msg) => {
       const currentBlockNumber = await web3.eth.getBlockNumber(); 
       const heroIncome = await fetchHeroIncome(
           heroInfo[0],
-          heroWork.careerAddr,
+          heroWork.workType,
           heroWork.startTime,
           currentBlockNumber
       );
-      const primaryStats = getPrimaryStats(heroInfo[1], heroInfo[0]);
-      totalSalaryPerBlock += computeSalaryPerBlock([primaryStats[0], primaryStats[1]], heroInfo[0][6]);
 
-      const heroStatsSummary = primaryStats.join('/') + '/' + heroInfo[0][6];
-      const heroMiningTimeInDays = ((currentBlockNumber-parseInt(heroWork.startTime))/nBlocksPerDay).toFixed(1);
-      const heroIncomeParsed = web3.utils.fromWei(heroIncome);
+      let primaryStats;
+      let heroStatsSummary;
+
+      try {
+        primaryStats = getPrimaryStats(heroInfo[1], heroInfo[0]);
+        totalSalaryPerBlock += computeSalaryPerBlock([primaryStats[0], primaryStats[1]], heroInfo[0][6]);
+        heroStatsSummary = primaryStats.join('/') + '/' + heroInfo[0][6];
+      } catch (err) {
+        if (err === 400) {
+          totalSalaryPerBlock += 0;
+          heroStatsSummary = 'NA/NA/' + heroInfo[0][6];
+        } else {
+          throw err;
+        }
+      }
+
+      const heroMiningTimeInDays = heroIncome.isWorking ? ((currentBlockNumber-parseInt(heroWork.startTime))/nBlocksPerDay).toFixed(1) : 'NA';
+      const heroIncomeParsed = web3.utils.fromWei(heroIncome.value);
+      const heroGoldBalance = heroIncome.isWorking ? heroIncomeParsed : 'NA';
       totalIncome += parseFloat(heroIncomeParsed);
 
       heroes.push({
         Role: heroRoleName,
         Stats: heroStatsSummary,
         Time: heroMiningTimeInDays,
-        Balance: heroIncomeParsed
+        Gold: heroGoldBalance
       });
     }
 

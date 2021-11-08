@@ -37,7 +37,7 @@ bot.onText(/\/t (.+)/, async (msg, match) => {
   const tokenName = match[1];
 
   if (tokenName === null || tokenName === undefined) {
-    bot.sendMessage(chatId, 'Token ' + tokenName + ' not available!');
+    bot.sendMessage(chatId, 'Token not available!');
     return;
   }
 
@@ -45,7 +45,7 @@ bot.onText(/\/t (.+)/, async (msg, match) => {
   const tokenSymbol = Symbols[tokenName.toUpperCase()];
 
   if (tokenSymbol === undefined) {
-    bot.sendMessage(chatId, 'Token ' + tokenSymbol + ' not available!');
+    bot.sendMessage(chatId, 'Token not available!');
     return;
   }
 

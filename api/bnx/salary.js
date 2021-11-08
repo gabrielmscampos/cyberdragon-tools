@@ -25,7 +25,7 @@ const getPrimaryStats = (heroRoleAddr, heroStats) => {
     s.push(str);
     s.push(agi);
   } else {
-    console.error(`roleAddress (${roleAddress}) not implemented.`)
+    console.error(`roleAddress (${heroRoleAddr}) not implemented.`)
     throw 400;
   }
 

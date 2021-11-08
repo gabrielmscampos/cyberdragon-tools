@@ -4,7 +4,7 @@ services:
     build:
       context: ./
       dockerfile: Dockerfile
-    container_name: node-crypto-warehouse
+    container_name: binaryxtools-telegrambot
     restart: always
     environment:
       - MONGO_URL=mongodb://lynxrufus:atmylynxrufusserver@127.0.0.1:27017/

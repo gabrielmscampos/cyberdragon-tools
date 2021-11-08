@@ -1,0 +1,18 @@
+version: '3'
+services:
+  binaryxtools-telegrambot:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    container_name: node-crypto-warehouse
+    restart: always
+    environment:
+      - MONGO_URL=mongodb://lynxrufus:atmylynxrufusserver@127.0.0.1:27017/
+      - MONGO_DB_NAME=cryptoWarehouse
+      - STAGE=PROD
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+    networks:
+      -  crypto-warehouse_default
+networks:
+  crypto-warehouse_default:
+    external: true

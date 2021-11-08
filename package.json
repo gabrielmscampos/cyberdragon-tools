@@ -1,0 +1,20 @@
+{
+  "name": "binaryx-tools",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "test:api": "STAGE=DEV node api/index.js",
+    "start:devbot": "STAGE=DEV node telegrambot/index.js",
+    "start:prodbot": "node telegrambot/index.js"
+  },
+  "author": "Gabriel Moreira",
+  "license": "GPL-3.0",
+  "dependencies": {
+    "axios": "^0.24.0",
+    "mongodb": "^4.1.4",
+    "node-telegram-bot-api": "^0.54.0",
+    "string-table": "^0.1.5",
+    "web3": "^1.6.0"
+  }
+}

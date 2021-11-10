@@ -413,8 +413,8 @@ bot.onText(/\/w/, async (msg) => {
 
     for (let tokenID of account.tokens) {
 
-      if (tokenID.length !== 77) {
-        bot.sendMessage(chatId, `'tokenID ${tokenID} is invalid! Remove with /rmToken ${tokenID}'`);
+      if (tokenID.length < 75 || tokenID.length > 80) {
+        bot.sendMessage(chatId, `tokenID ${tokenID} is invalid! Remove with /rmToken ${tokenID}`);
         return;
       }
 

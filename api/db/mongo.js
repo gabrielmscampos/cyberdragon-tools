@@ -7,43 +7,40 @@ const mongoClient = MongoDB.MongoClient;
 const mongoURL = stageConfig[STAGE_PARAMETER].URL;
 const mongoDBName = stageConfig[STAGE_PARAMETER].DB_NAME;
 
-const checkAccount = async (collectionName, username, account) => {
+const getAccount = async (collectionName, chatID) => {
 
-  let query = { username: username };
+  // query object
+  const query = { chatID: chatID };
 
-  if (account !== null && account !== undefined) {
-    query['address'] = account;
+  // connect, find and close
+  const client = await mongoClient.connect(mongoURL);
+  const collection = client.db(mongoDBName).collection(collectionName);
+  const result = await collection.findOne(query);
+  client.close();
+
+  if (result === null) {
+    throw 404; // Not found
   }
 
-  const client = await mongoClient.connect(mongoURL);
-  const collection = client.db(mongoDBName).collection(collectionName);
-  const result = await collection.findOne(query);
-  client.close();
-
   return result;
 };
 
-const checkAccountWithChatID = async (collectionName, chatID) => {
+const putAccount = async (collectionName, chatID) => {
 
-  let query = { chatID: chatID };
+  // If account do not exists, continue if throw 404
+  try {
+    await getAccount(collectionName, chatID);
+    throw 400; // Bad request
+  } catch (err) {
+    if (err !== 404) {
+      throw 500; // Internal server error
+    }
+  }
 
-  const client = await mongoClient.connect(mongoURL);
-  const collection = client.db(mongoDBName).collection(collectionName);
-  const result = await collection.findOne(query);
-  client.close();
+  // empty document
+  const document = { chatID: chatID, tokens: [] };
 
-  return result;
-};
-
-const insertAccount = async (collectionName, username, address, chatID) => {
-
-  const document = {
-    username: username,
-    address: address,
-    chatID: chatID,
-    tokens: []
-  };
-
+  // connect, insert and close
   const client = await mongoClient.connect(mongoURL);
   const collection = client.db(mongoDBName).collection(collectionName);
   const result = await collection.insertOne(document);
@@ -52,10 +49,21 @@ const insertAccount = async (collectionName, username, address, chatID) => {
   return result;
 };
 
-const deleteAccount = async (collectionName, username) => {
+const deleteAccount = async (collectionName, chatID) => {
 
-  const query = { username: username };
+  // If account exists (do not throw 404), continue
+  try {
+    await getAccount(collectionName, chatID);
+  } catch (err) {
+    if (err === 404) {
+      throw 400; // Bad request
+    }
+  }
 
+  // query object
+  const query = { chatID: chatID };
+
+  // connect, delete and close
   const client = await mongoClient.connect(mongoURL);
   const collection = client.db(mongoDBName).collection(collectionName);
   const result = await collection.deleteOne(query);
@@ -64,29 +72,55 @@ const deleteAccount = async (collectionName, username) => {
   return result;
 };
 
-const updateAccountChat = async (collectionName, username, chatID) => {
+const updateAccount = async (collectionName, _id, chatID) => {
 
+  // If account exists (do not throw 404), continue
+  try {
+    await getAccount(collectionName, chatID);
+  } catch (err) {
+    if (err === 404) {
+      throw 400; // Bad request
+    }
+  }
+
+  // query object and values to change
   const values = { $set: { chatID: chatID } };
-  const query = { username: username };
+  const query = { _id: _id };
 
+  // connect, update and close
   const client = await mongoClient.connect(mongoURL);
   const collection = client.db(mongoDBName).collection(collectionName);
-  await collection.updateOne(query, values);
+  const result = await collection.updateOne(query, values);
   client.close();
+
+  return result;
 };
 
-const updateAccountTokens = async (collectionName, operation, username, tokenID) => {
+const updateAccountTokens = async (collectionName, operation, chatID, tokenID) => {
 
+  // If account exists (do not throw 404), continue
+  try {
+    await getAccount(collectionName, chatID);
+  } catch (err) {
+    if (err === 404) {
+      throw 400; // Bad request
+    }
+  }
+
+  // update values to change with operation method
   let values;
-  const query = { username: username };
+  let tokensOp;
+  const query = { chatID: chatID };
   if (operation === 'add') {
-    values = { $addToSet: { tokens: tokenID } }; // push to array only if not exists
+    tokensOp = Array.isArray(tokenID) ? { tokens: { $each: tokenID } } : { tokens: tokenID };
+    values = { $addToSet: tokensOp }; // $push to array only if not exists
   } else if (operation === 'rmv') {
-    values = { $pull: { tokens: tokenID } };
+    values = Array.isArray(tokenID) ? { $pullAll: { tokens: tokenID } } : { $pull: { tokens: tokenID } };
   } else {
     throw 400;
   }
 
+  // connect, update and close
   const client = await mongoClient.connect(mongoURL);
   const collection = client.db(mongoDBName).collection(collectionName);
   await collection.updateOne(query, values);
@@ -112,11 +146,10 @@ const getTokenPrice = async (collectionName, symbol, currentTimestamp) => {
 export {
   mongoClient,
   mongoURL,
-  checkAccount,
-  checkAccountWithChatID,
-  insertAccount,
+  putAccount,
+  getAccount,
   deleteAccount,
+  updateAccount,
   updateAccountTokens,
-  updateAccountChat,
   getTokenPrice
 };

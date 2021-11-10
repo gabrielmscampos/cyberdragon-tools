@@ -323,8 +323,8 @@ bot.onText(/\/addToken (.+)/, async (msg, match) => {
   }
 
   for (let tok of tokenID) {
-    if (tok.length !== 77) {
-      bot.sendMessage(chatId, `'tokenID ${tokenID} is invalid! Remove with /rmToken ${tokenID}'`);
+    if (tok.length < 75 || tok.length > 80) {
+      bot.sendMessage(chatId, `'tokenID ${tok} is invalid! Remove with /rmToken ${tok}'`);
       return;
     }
   }
@@ -362,8 +362,8 @@ bot.onText(/\/rmToken (.+)/, async (msg, match) => {
   }
   
   for (let tok of tokenID) {
-    if (tok.length !== 77) {
-      bot.sendMessage(chatId, `'tokenID ${tokenID} is invalid! Remove with /rmToken ${tokenID}'`);
+    if (tok.length < 75 || tok.length > 80) {
+      bot.sendMessage(chatId, `'tokenID ${tok} is invalid! Remove with /rmToken ${tok}'`);
       return;
     }
   }

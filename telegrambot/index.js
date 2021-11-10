@@ -14,6 +14,73 @@ bot.on("polling_error", console.log);
 // Mongo db collection
 const collectionName = 'bnx-accounts-telegram-bot';
 
+// Start
+bot.onText(/\/start/, async (msg) => {
+  const chatId = msg.chat.id;
+  let response = '';
+  response += '/t - Get token price at the moment using PancakeSwap RouterV2\n';
+  response += '/c - Compute hero monetary income\n';
+  response += '/cl - Compute monetary income of multiple heroes\n';
+  response += '/account - Check account status\n';
+  response += '/newAccount - Register new account\n';
+  response += '/deleteAccount - Delete existing account\n';
+  response += '/addToken - Register one or more heroes into account\n';
+  response += '/rmToken - Remove one or more heroes from account\n';
+  response += '/w - Show account monetary income and current gold balance\n';
+  response += '\n';
+  response += 'Use /help {command} to check how to use.';
+  bot.sendMessage(chatId, response)
+})
+
+// Help
+bot.onText(/\/help (.+)/, async (msg, match) => {
+  const chatId = msg.chat.id;
+  const command = match[1];
+
+  let response = '';
+  if (command === 't') {
+    response += '/t - Get token price at the moment using PancakeSwap RouterV2\n\n';
+    response += 'Example usage: /t {token}\n\n';
+    response += 'Available values for {token}: bnb, bnx, gold, ironkey'
+  } else if (command === 'c') {
+    response += '/c - Compute hero monetary income\n\n';
+    response += 'Example usage: /c {p} {s} {l}\n\n';
+    response += '{p}: Hero primary stat\n';
+    response += '{s}: Hero secondary stat\n';
+    response += '{l}: Hero level\n';
+  } else if (command === 'cl') {
+    response += '/cl - Compute monetary income of multiple heroes\n\n';
+    response += 'Example usage: /cl {p1},{p2},... {s1},{s2},... {l1},{l2},...\n\n';
+    response += '{p1},{p2},...: Heroes primary stat\n';
+    response += '{s1},{p2},...: Heroes secondary stat\n';
+    response += '{l1},{p2},...: Heroes level\n';
+  } else if (command === 'account') {
+    response += '/account - Check account status\n\n';
+    response += 'Example usage: /account\n\n';
+  } else if (command === 'newAccount') {
+    response += '/newAccount - Register new account\n\n';
+    response += 'Example usage: /newAccount\n\n';
+  } else if (command === 'deleteAccount') {
+    response += '/deleteAccount - Delete existing account\n\n';
+    response += 'Example usage: /deleteAccount\n\n';
+  } else if (command === 'addToken') {
+    response += '/addToken - Register one or more heroes into account\n\n';
+    response += 'Example usage: /addToken {tokenID}\n\n';
+    response += '{tokenID}: Hero tokenID, if multiple use command (,) as separator\n';
+  } else if (command === 'rmToken') {
+    response += '/rmToken - Remove one or more heroes from account\n\n';
+    response += 'Example usage: /rmToken {tokenID}\n\n';
+    response += '{tokenID}: Hero tokenID, if multiple use command (,) as separator\n';
+  } else if (command === 'w') {
+    response += '/w - Show account monetary income and current gold balance\n\n';
+    response += 'Example usage: /w\n\n';
+  } else {
+    response += `Command \/${command} is invalid, use /start to list available commands.\n\n`;
+  }
+
+  bot.sendMessage(chatId, response)
+})
+
 // Get token price ATM
 bot.onText(/\/t (.+)/, async (msg, match) => {
   const chatId = msg.chat.id;

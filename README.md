@@ -6,6 +6,17 @@ Tools for simulating characters rewards in BinaryX CyberDragon Metaverse and int
 
 This projects ships a telegram bot code to manage addresses tokens via telegram chatID using mongoDB for storing users credentials. The chatID property is used to identify the user and his nft tokens.
 
+## Start method
+```
+Command: /start
+Description: Bot overview
+```
+
+## Help method
+```
+Command: /help {command}
+Description: Get command instructions
+```
 
 ## Check token price
 ```
@@ -51,6 +62,12 @@ Description: Check account status (use telegram chatID in backend)
 ```
 Command: /newAccount
 Description: Register new account in MongoDB using chatID as user identifier
+```
+
+## Delete account
+```
+Command: /deleteAccount
+Description: Delete account in MongoDB
 ```
 
 ## Register token into account

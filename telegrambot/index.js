@@ -1,35 +1,18 @@
 import TelegramBot from 'node-telegram-bot-api';
 import stringTable from 'string-table';
 
-import {
-  USDCollections,
-  Symbols
-} from '../api/db/symbols.js'
-import {
-  checkAccount,
-  checkAccountWithChatID,
-  insertAccount,
-  deleteAccount,
-  updateAccountTokens,
-  updateAccountChat,
-  getTokenPrice
-} from '../api/db/mongo.js'
-import {
-  web3,
-  roleToName,
-  fetchHeroInfo,
-  fetchHeroWork,
-  fetchHeroIncome
-} from '../api/blockchain/chain.js'
-import {
-  getPrimaryStats,
-  computeSalaryPerBlock
-} from '../api/bnx/salary.js'
+import { USDCollections, Symbols } from '../api/db/symbols.js'
+import { getAccount, putAccount, deleteAccount, updateAccount, updateAccountTokens, getTokenPrice } from '../api/db/mongo.js'
+import { web3, roleToName, fetchHeroInfo, fetchHeroWork, fetchHeroIncome } from '../api/blockchain/chain.js'
+import { getPrimaryStats, computeSalaryPerBlock } from '../api/bnx/salary.js'
 
 // Create a bot that uses 'polling' to fetch new updates
 const tokenTelegramBot = process.env.TELEGRAM_TOKEN;
 const bot = new TelegramBot(tokenTelegramBot, {polling: true});
 bot.on("polling_error", console.log);
+
+// Mongo db collection
+const collectionName = 'bnx-accounts-telegram-bot';
 
 // Get token price ATM
 bot.onText(/\/t (.+)/, async (msg, match) => {
@@ -251,28 +234,26 @@ bot.onText(/\/account/, async (msg) => {
     userChatId = chatId;
   }
 
-  const collectionName = 'bnx-accounts';
-
   try {
-    const res = await checkAccountWithChatID(collectionName, userChatId);
-    if (res === null || res === undefined) {
+    const res = await getAccount(collectionName, userChatId);
+    let responseMsg = '';
+    responseMsg += `id: ${res._id.toString()}\n`;
+    responseMsg += `userID: ${res.chatID}\n`;
+    responseMsg += `Tokens: ${JSON.stringify(res.tokens)}\n`;
+    bot.sendMessage(chatId, responseMsg);
+  } catch(err) {
+    if (err === 404) {
       bot.sendMessage(chatId, 'Account not registered!');
     } else {
-      let responseMsg = '';
-      responseMsg += `User: ${res.username}\n`;
-      responseMsg += `Address: ${res.address}\n`;
-      responseMsg += `Tokens: ${JSON.stringify(res.tokens)}\n`;
-      bot.sendMessage(chatId, responseMsg);
+      console.error(err);
+      bot.sendMessage(chatId, 'Internal server error.');
     }
-  } catch(err) {
-    console.error(err);
-    bot.sendMessage(chatId, 'Internal server error.');
   }
 
 });
 
 // Create new account
-bot.onText(/\/newAccount (.+) (.+)/, async (msg, match) => {
+bot.onText(/\/newAccount/, async (msg, match) => {
   const chatId = msg.chat.id;
   const chatType = msg.chat.type;
   let userChatId;
@@ -283,39 +264,42 @@ bot.onText(/\/newAccount (.+) (.+)/, async (msg, match) => {
     userChatId = chatId;
   }
 
-  const username = match[1];
-  const address = match[2];
-  const collectionName = 'bnx-accounts';
-
-  if (username === null || username === undefined) {
-    bot.sendMessage(chatId, 'Username not defined!');
-    return;
+  try {
+    await putAccount(collectionName, userChatId);
+    bot.sendMessage(chatId, 'Account registered! Add token with /addToken');
+  } catch(err) {
+    if (err === 400) {
+      bot.sendMessage(chatId, 'Account already registered!');
+    } else {
+      console.error(err);
+      bot.sendMessage(chatId, 'Internal server error.');
+    }
   }
 
-  if (address === null || address === undefined) {
-    bot.sendMessage(chatId, 'Address not defined!');
-    return;
+});
+
+// Delete account
+bot.onText(/\/deleteAccount/, async (msg, match) => {
+  const chatId = msg.chat.id;
+  const chatType = msg.chat.type;
+  let userChatId;
+
+  if (chatType == 'group') {
+    userChatId = msg.from.id;
+  } else {
+    userChatId = chatId;
   }
 
   try {
-    let responseMsg = '';
-    let res = await checkAccount(collectionName, username);
-
-    if (res === null || res === undefined) {
-      await insertAccount(collectionName, username, address, userChatId);
-      res = await checkAccount(collectionName, username);
-      responseMsg += `Account registered!\n\n`;
-    } else {
-      responseMsg += `Account already registered!\n\n`;
-    }
-
-    responseMsg += `User: ${res.username}\n`;
-    responseMsg += `Address: ${res.address}\n`;
-    responseMsg += `Tokens: ${JSON.stringify(res.tokens)}\n`;
-    bot.sendMessage(chatId, responseMsg);
+    await deleteAccount(collectionName, userChatId);
+    bot.sendMessage(chatId, 'Account deleted!');
   } catch(err) {
-    console.error(err);
-    bot.sendMessage(chatId, 'Internal server error.');
+    if (err === 400) {
+      bot.sendMessage(chatId, 'Account not registered!');
+    } else {
+      console.error(err);
+      bot.sendMessage(chatId, 'Internal server error.');
+    }
   }
 
 });
@@ -332,26 +316,29 @@ bot.onText(/\/addToken (.+)/, async (msg, match) => {
     userChatId = chatId;
   }
 
-  const tokenID = match[1];
-  const collectionName = 'bnx-accounts';
-
+  const tokenID = match[1].split(',');
   if (tokenID === null || tokenID === undefined) {
     bot.sendMessage(chatId, 'Token ID not defined!');
     return;
   }
 
-  try {
-    const res = await checkAccountWithChatID(collectionName, userChatId);
-
-    if (res === null || res === undefined) {
-      bot.sendMessage(chatId, 'Account not registered!')
-    } else {
-      await updateAccountTokens(collectionName, 'add', res.username, tokenID);
-      bot.sendMessage(chatId, 'Accounts\' tokens updated!');
+  for (let tok of tokenID) {
+    if (tok.length !== 77) {
+      bot.sendMessage(chatId, `'tokenID ${tokenID} is invalid! Remove with /rmToken ${tokenID}'`);
+      return;
     }
+  }
+
+  try {
+    await updateAccountTokens(collectionName, 'add', userChatId, tokenID);
+    bot.sendMessage(chatId, 'Token(s) successfuly added! Use /w to check your returns and current income.');
   } catch(err) {
-    console.error(err);
-    bot.sendMessage(chatId, 'Internal server error.');
+    if (err === 400) {
+      bot.sendMessage(chatId, 'Account not registered! Register using /newAccount');
+    } else {
+      console.error(err);
+      bot.sendMessage(chatId, 'Internal server error.');
+    }
   }
 
 });
@@ -368,26 +355,29 @@ bot.onText(/\/rmToken (.+)/, async (msg, match) => {
     userChatId = chatId;
   }
 
-  const tokenID = match[1];
-  const collectionName = 'bnx-accounts';
-
+  const tokenID = match[1].split(',');
   if (tokenID === null || tokenID === undefined) {
     bot.sendMessage(chatId, 'Token ID not defined!');
     return;
   }
+  
+  for (let tok of tokenID) {
+    if (tok.length !== 77) {
+      bot.sendMessage(chatId, `'tokenID ${tokenID} is invalid! Remove with /rmToken ${tokenID}'`);
+      return;
+    }
+  }
 
   try {
-    const res = await checkAccountWithChatID(collectionName, userChatId);
-
-    if (res === null || res === undefined) {
-      bot.sendMessage(chatId, 'Account not registered!')
-    } else {
-      await updateAccountTokens(collectionName, 'rmv', res.username, tokenID);
-      bot.sendMessage(chatId, 'Accounts\' tokens updated!');
-    }
+    await updateAccountTokens(collectionName, 'rmv', userChatId, tokenID);
+    bot.sendMessage(chatId, 'Token(s) successfuly removed!');
   } catch(err) {
-    console.error(err);
-    bot.sendMessage(chatId, 'Internal server error.');
+    if (err === 400) {
+      bot.sendMessage(chatId, 'Account not registered! Register using /newAccount');
+    } else {
+      console.error(err);
+      bot.sendMessage(chatId, 'Internal server error.');
+    }
   }
 
 });
@@ -404,7 +394,6 @@ bot.onText(/\/w/, async (msg) => {
     userChatId = chatId;
   }
 
-  const collectionName = 'bnx-accounts';
   const nBlocksPerDay = 432000/15;
   const tokenSymbol = Symbols['GOLD'];
   const tokenCollection = USDCollections['GOLD'];
@@ -412,13 +401,7 @@ bot.onText(/\/w/, async (msg) => {
   currentTimestamp.setUTCHours(0,0,0,0);
 
   try {
-    const res = await checkAccountWithChatID(collectionName, userChatId);
-
-    if (res === null || res === undefined) {
-      bot.sendMessage(chatId, 'Account not registered!')
-      return;
-    }
-
+    const account = await getAccount(collectionName, userChatId);
     const result = await getTokenPrice(tokenCollection, tokenSymbol, currentTimestamp);
     const currentOHLC = result.ohlc[result.ohlc.length - 1];
     const price = currentOHLC.close;
@@ -428,7 +411,13 @@ bot.onText(/\/w/, async (msg) => {
     let totalSalaryPerBlock = 0;
     let totalIncome = 0;
 
-    for (let tokenID of res.tokens) {
+    for (let tokenID of account.tokens) {
+
+      if (tokenID.length !== 77) {
+        bot.sendMessage(chatId, `'tokenID ${tokenID} is invalid! Remove with /rmToken ${tokenID}'`);
+        return;
+      }
+
       const heroInfo = await fetchHeroInfo(tokenID);
       const heroRoleName = roleToName[heroInfo[1]];
       const heroWork = await fetchHeroWork(tokenID);
@@ -494,8 +483,12 @@ bot.onText(/\/w/, async (msg) => {
     responseMsg += stringTable.create(heroes);
     bot.sendMessage(chatId, responseMsg);
   } catch(err) {
-    console.error(err);
-    bot.sendMessage(chatId, 'Internal server error.');
+    if (err === 404) {
+      bot.sendMessage(chatId, 'Account not registered!');
+    } else {
+      console.error(err);
+      bot.sendMessage(chatId, 'Internal server error.');
+    }
   }
 
 });

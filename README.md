@@ -49,27 +49,24 @@ Description: Check account status (use telegram chatID in backend)
 
 ## Register account
 ```
-Command: /newAccount {user} {address}
-Description: Register new account in MongoDB
-
-{user} str: User name (not used in telegram bot)
-{address} str: Wallet public address
+Command: /newAccount
+Description: Register new account in MongoDB using chatID as user identifier
 ```
 
 ## Register token into account
 ```
 Command: /addToken {tokenID}
-Description: Register NFT hero into user wallet (use telegram chatID in backend)
+Description: Register one or more NFT hero into user wallet
 
-{tokenID} str: NFT token id
+{tokenID} str: NFT token id, if multiple use comma (,) separator
 ```
 
 ## Remove token from account
 ```
 Command: /rmToken {tokenID}
-Description: Remove NFT hero from user wallet (use telegram chatID in backend)
+Description: Remove one or more NFT hero(s) from user wallet
 
-{tokenID} str: NFT token id
+{tokenID} str: NFT token id, if multiple use comma (,) separator
 ```
 
 ## Show account monetary statistics

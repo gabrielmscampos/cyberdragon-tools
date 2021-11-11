@@ -27,6 +27,7 @@ bot.onText(/\/start/, async (msg) => {
   response += '/addToken - Register one or more heroes into account\n';
   response += '/rmToken - Remove one or more heroes from account\n';
   response += '/w - Show account monetary income and current gold balance\n';
+  response += '/tokenInfo - Show one or more heroes monetary statistics without registering\n';
   response += '\n';
   response += 'Use /help {command} to check how to use.';
   bot.sendMessage(chatId, response)
@@ -74,6 +75,10 @@ bot.onText(/\/help (.+)/, async (msg, match) => {
   } else if (command === 'w') {
     response += '/w - Show account monetary income and current gold balance\n\n';
     response += 'Example usage: /w\n\n';
+  } else if (command === 'tokenInfo') {
+    response += '/tokenInfo - Show one or more heroes monetary statistics without registering\n\n';
+    response += 'Example usage: /tokenInfo {tokenID}\n\n';
+    response += '{tokenID}: Hero tokenID, if multiple use command (,) as separator\n';
   } else {
     response += `Command \/${command} is invalid, use /start to list available commands.\n\n`;
   }

@@ -559,3 +559,115 @@ bot.onText(/\/w/, async (msg) => {
   }
 
 });
+
+// Get work info using chatID
+bot.onText(/\/tokenInfo (.+)/, async (msg, match) => {
+  const chatId = msg.chat.id;
+  const tokens = match[1].split(',').filter((v, i, a) => a.indexOf(v) === i);
+
+  const nBlocksPerDay = 432000/15;
+  const tokenSymbol = Symbols['GOLD'];
+  const tokenCollection = USDCollections['GOLD'];
+  const currentTimestamp = new Date();
+  currentTimestamp.setUTCHours(0,0,0,0);
+
+  try {
+    const result = await getTokenPrice(tokenCollection, tokenSymbol, currentTimestamp);
+    const currentOHLC = result.ohlc[result.ohlc.length - 1];
+    const price = currentOHLC.close;
+    const time = currentOHLC.time;
+
+    const heroes = [];
+    const owners = [];
+    let totalSalaryPerBlock = 0;
+    let totalIncome = 0;
+
+    for (let tokenID of tokens) {
+
+      if (tokenID.length < 75 || tokenID.length > 80) {
+        bot.sendMessage(chatId, `tokenID ${tokenID} is invalid! Remove with /rmToken ${tokenID}`);
+        return;
+      }
+
+      const heroInfo = await fetchHeroInfo(tokenID);
+      const heroRoleName = roleToName[heroInfo[1]];
+      const heroWork = await fetchHeroWork(tokenID);
+      const currentBlockNumber = await web3.eth.getBlockNumber(); 
+      const heroIncome = await fetchHeroIncome(
+          heroInfo[0],
+          heroWork.workType,
+          heroWork.startTime,
+          currentBlockNumber
+      );
+
+      let primaryStats;
+      let heroStatsSummary;
+
+      try {
+        primaryStats = getPrimaryStats(heroInfo[1], heroInfo[0]);
+        totalSalaryPerBlock += computeSalaryPerBlock([primaryStats[0], primaryStats[1]], heroInfo[0][6]);
+        heroStatsSummary = primaryStats.join('/') + '/' + heroInfo[0][6];
+      } catch (err) {
+        if (err === 400) {
+          totalSalaryPerBlock += 0;
+          heroStatsSummary = 'NA/NA/' + heroInfo[0][6];
+        } else {
+          throw err;
+        }
+      }
+
+      const heroMiningTimeInDays = heroIncome.isWorking ? ((currentBlockNumber-parseInt(heroWork.startTime))/nBlocksPerDay).toFixed(1) : 'NA';
+      const heroIncomeParsed = web3.utils.fromWei(heroIncome.value);
+      const heroGoldBalance = heroIncome.isWorking ? heroIncomeParsed : 'NA';
+      totalIncome += parseFloat(heroIncomeParsed);
+
+      heroes.push({
+        Role: heroRoleName,
+        Stats: heroStatsSummary,
+        Time: heroMiningTimeInDays,
+        Gold: heroGoldBalance
+      });
+
+      owners.indexOf(heroWork.owner) === -1 ? owners.push(heroWork.owner) : null;
+    }
+
+    const totalIncomeUSD = price*totalIncome;
+    const totalSalaryPerDay = totalSalaryPerBlock*nBlocksPerDay;
+    const totalSalaryPer15Days = totalSalaryPerBlock*nBlocksPerDay*15;
+    const totalSalaryPerMonth = totalSalaryPerBlock*nBlocksPerDay*30;
+    const totalDollarsPerDay = price*totalSalaryPerDay;
+    const totalDollarsPer15Days = price*totalSalaryPer15Days;
+    const totalDollarsPerMonth = price*totalSalaryPerMonth;
+    
+    let responseMsg = '';
+    responseMsg += `Computation at 100% mining ratio\n\n`
+    responseMsg += `GOLD/block: ${totalSalaryPerBlock.toFixed(3)}\n`
+    responseMsg += `GOLD/day: ${totalSalaryPerDay.toFixed(2)}\n`
+    responseMsg += `GOLD/15days: ${totalSalaryPer15Days.toFixed(2)}\n`
+    responseMsg += `GOLD/month: ${totalSalaryPerMonth.toFixed(2)}\n\n`
+    responseMsg += `USD/day: ${totalDollarsPerDay.toFixed(2)}\n`
+    responseMsg += `USD/15days: ${totalDollarsPer15Days.toFixed(2)}\n`
+    responseMsg += `USD/month: ${totalDollarsPerMonth.toFixed(2)}\n\n`
+    responseMsg += `Pair: ${tokenCollection}\n`;
+    responseMsg += `Timestamp: ${time.toISOString()}\n`;
+    responseMsg += `Price: $${price}\n\n`;
+    responseMsg += `Current GOLD balance: ${totalIncome}\n`;
+    responseMsg += `Current USD balance: $${totalIncomeUSD.toFixed(2)}\n\n`;
+    responseMsg += stringTable.create(heroes);
+    responseMsg += '\n\n';
+    responseMsg += 'Owners addresses:\n\n';
+    for (let own of owners) {
+      responseMsg += `${own}\n`;
+    }
+
+    bot.sendMessage(chatId, responseMsg);
+  } catch(err) {
+    if (err === 404) {
+      bot.sendMessage(chatId, 'Account not registered!');
+    } else {
+      console.error(err);
+      bot.sendMessage(chatId, 'Internal server error.');
+    }
+  }
+
+});

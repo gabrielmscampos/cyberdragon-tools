@@ -91,3 +91,11 @@ Description: Remove one or more NFT hero(s) from user wallet
 Command: /w
 Description: Show account statistics (monetary income, current heroes gold balance)
 ```
+
+## Show monetary statistics of tokens
+```
+Command: /tokenInfo {token}
+Description: Show monetary statistics of token
+
+{tokenID} str: NFT token id, if multiple use comma (,) separator
+```

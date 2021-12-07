@@ -4,7 +4,7 @@ import stringTable from 'string-table';
 import { USDCollections, Symbols } from '../api/db/symbols.js'
 import { getAccount, putAccount, deleteAccount, updateAccount, updateAccountTokens, getTokenPrice } from '../api/db/mongo.js'
 import { web3, roleToName, fetchHeroInfo, fetchHeroWork, fetchHeroIncome } from '../api/blockchain/chain.js'
-import { getPrimaryStats, computeSalaryPerBlock } from '../api/bnx/salary.js'
+import { getPrimaryStats, computeSalaryPerBlock, goldMiningRatio } from '../api/bnx/salary.js'
 
 // Create a bot that uses 'polling' to fetch new updates
 const tokenTelegramBot = process.env.TELEGRAM_TOKEN;
@@ -196,7 +196,9 @@ bot.onText(/\/c (.+) (.+) (.+)/, async (msg, match) => {
     const currentOHLC = result.ohlc[result.ohlc.length - 1];
     const price = currentOHLC.close;
     const time = currentOHLC.time;
-    const salaryPerBlock = computeSalaryPerBlock([primaryStat, secondaryStat], level);
+    const goldRatio = goldMiningRatio(price);
+
+    const salaryPerBlock = goldRatio*computeSalaryPerBlock([primaryStat, secondaryStat], level);
     const salaryPerDay = salaryPerBlock*nBlocksPerDay;
     const salaryPer15Days = salaryPerBlock*nBlocksPerDay*15;
     const salaryPerMonth = salaryPerBlock*nBlocksPerDay*30;
@@ -205,7 +207,7 @@ bot.onText(/\/c (.+) (.+) (.+)/, async (msg, match) => {
     const dollarsPerMonth = price*salaryPerMonth;
     
     let responseMsg = '';
-    responseMsg += `Computation at 100% mining ratio\n\n`
+    responseMsg += `Computation at ${goldRatio*100}% mining ratio\n\n`
     responseMsg += `Level: ${level}\n`
     responseMsg += `Primary Status: ${primaryStat}\n`
     responseMsg += `Secondary Status: ${secondaryStat}\n\n`
@@ -261,10 +263,11 @@ bot.onText(/\/cl (.+) (.+) (.+)/, async (msg, match) => {
     const currentOHLC = result.ohlc[result.ohlc.length - 1];
     const price = currentOHLC.close;
     const time = currentOHLC.time;
+    const goldRatio = goldMiningRatio(price);
     let totalSalaryPerBlock = 0;
 
     for (let i = 0; i < level.length; i++) {
-      totalSalaryPerBlock += computeSalaryPerBlock([primaryStat[i], secondaryStat[i]], level[i]);
+      totalSalaryPerBlock += goldRatio*computeSalaryPerBlock([primaryStat[i], secondaryStat[i]], level[i]);
     };
 
     const totalSalaryPerDay = totalSalaryPerBlock*nBlocksPerDay;
@@ -275,7 +278,7 @@ bot.onText(/\/cl (.+) (.+) (.+)/, async (msg, match) => {
     const totalDollarsPerMonth = price*totalSalaryPerMonth;
     
     let responseMsg = '';
-    responseMsg += `Computation at 100% mining ratio\n\n`
+    responseMsg += `Computation at ${goldRatio*100}% mining ratio\n\n`
     responseMsg += `GOLD/block: ${totalSalaryPerBlock.toFixed(3)}\n`
     responseMsg += `GOLD/day: ${totalSalaryPerDay.toFixed(2)}\n`
     responseMsg += `GOLD/15days: ${totalSalaryPer15Days.toFixed(2)}\n`
@@ -478,6 +481,7 @@ bot.onText(/\/w/, async (msg) => {
     const currentOHLC = result.ohlc[result.ohlc.length - 1];
     const price = currentOHLC.close;
     const time = currentOHLC.time;
+    const goldRatio = goldMiningRatio(price);
 
     const heroes = [];
     let totalSalaryPerBlock = 0;
@@ -506,7 +510,7 @@ bot.onText(/\/w/, async (msg) => {
 
       try {
         primaryStats = getPrimaryStats(heroInfo[1], heroInfo[0]);
-        totalSalaryPerBlock += computeSalaryPerBlock([primaryStats[0], primaryStats[1]], heroInfo[0][6]);
+        totalSalaryPerBlock += goldRatio*computeSalaryPerBlock([primaryStats[0], primaryStats[1]], heroInfo[0][6]);
         heroStatsSummary = primaryStats.join('/') + '/' + heroInfo[0][6];
       } catch (err) {
         if (err === 400) {
@@ -526,7 +530,7 @@ bot.onText(/\/w/, async (msg) => {
         Role: heroRoleName,
         Stats: heroStatsSummary,
         Time: heroMiningTimeInDays,
-        Gold: heroGoldBalance
+        Gold: parseFloat(heroGoldBalance).toFixed(2)
       });
     }
 
@@ -539,7 +543,7 @@ bot.onText(/\/w/, async (msg) => {
     const totalDollarsPerMonth = price*totalSalaryPerMonth;
     
     let responseMsg = '';
-    responseMsg += `Computation at 100% mining ratio\n\n`
+    responseMsg += `Computation at ${goldRatio*100}% mining ratio\n\n`
     responseMsg += `GOLD/block: ${totalSalaryPerBlock.toFixed(3)}\n`
     responseMsg += `GOLD/day: ${totalSalaryPerDay.toFixed(2)}\n`
     responseMsg += `GOLD/15days: ${totalSalaryPer15Days.toFixed(2)}\n`
@@ -581,6 +585,7 @@ bot.onText(/\/tokenInfo (.+)/, async (msg, match) => {
     const currentOHLC = result.ohlc[result.ohlc.length - 1];
     const price = currentOHLC.close;
     const time = currentOHLC.time;
+    const goldRatio = goldMiningRatio(price);
 
     const heroes = [];
     const owners = [];
@@ -610,7 +615,7 @@ bot.onText(/\/tokenInfo (.+)/, async (msg, match) => {
 
       try {
         primaryStats = getPrimaryStats(heroInfo[1], heroInfo[0]);
-        totalSalaryPerBlock += computeSalaryPerBlock([primaryStats[0], primaryStats[1]], heroInfo[0][6]);
+        totalSalaryPerBlock += goldRatio*computeSalaryPerBlock([primaryStats[0], primaryStats[1]], heroInfo[0][6]);
         heroStatsSummary = primaryStats.join('/') + '/' + heroInfo[0][6];
       } catch (err) {
         if (err === 400) {
@@ -630,7 +635,7 @@ bot.onText(/\/tokenInfo (.+)/, async (msg, match) => {
         Role: heroRoleName,
         Stats: heroStatsSummary,
         Time: heroMiningTimeInDays,
-        Gold: heroGoldBalance
+        Gold: parseFloat(heroGoldBalance).toFixed(2)
       });
 
       owners.indexOf(heroWork.owner) === -1 ? owners.push(heroWork.owner) : null;
@@ -645,7 +650,7 @@ bot.onText(/\/tokenInfo (.+)/, async (msg, match) => {
     const totalDollarsPerMonth = price*totalSalaryPerMonth;
     
     let responseMsg = '';
-    responseMsg += `Computation at 100% mining ratio\n\n`
+    responseMsg += `Computation at ${goldRatio*100}% mining ratio\n\n`
     responseMsg += `GOLD/block: ${totalSalaryPerBlock.toFixed(3)}\n`
     responseMsg += `GOLD/day: ${totalSalaryPerDay.toFixed(2)}\n`
     responseMsg += `GOLD/15days: ${totalSalaryPer15Days.toFixed(2)}\n`
